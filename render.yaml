@@ -98,3 +98,31 @@ services:
         value: https://nhljemjccwxldmauivde.supabase.co
       - key: SUPABASE_BUCKET
         value: resumes
+
+  # ── Notification Microservice ────────────────────────────
+  - type: web
+    name: notification-service
+    env: docker
+    dockerfilePath: ./backend/notification-service/Dockerfile
+    dockerContext: ./backend/notification-service
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 8089
+      - key: EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE
+        value: http://service-registry:8761/eureka/
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:postgresql://db.nhljemjccwxldmauivde.supabase.co:5432/postgres?sslmode=require
+      - key: SPRING_DATASOURCE_USERNAME
+        value: postgres
+      - key: SPRING_DATASOURCE_PASSWORD
+        value: Rednijat@123
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: MAIL_USERNAME
+        value: tajindersingh.dev@gmail.com
+      - key: MAIL_PASSWORD
+        value: ziiybjipcvbwclvn
