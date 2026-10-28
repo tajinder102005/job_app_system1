@@ -220,25 +220,6 @@ services:
       - SMTP_USERNAME=${MAIL_USERNAME:-tajindersingh.dev@gmail.com}
       - SMTP_PASSWORD=${MAIL_PASSWORD:-ziiybjipcvbwclvn}
 
-  # ── Recommendation Service ─────────────────────────────────────────────────
-  recommendation-service:
-    build: ./backend/recommendation-service
-    ports:
-      - "8084:8084"
-    networks:
-      - microservices-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      service-registry:
-        condition: service_started
-    environment:
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE=http://service-registry:8761/eureka
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/jobapp
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=Singh@123
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-
   # ── Redis (for future caching) ─────────────────────────────────────────────
   redis:
     image: redis:7-alpine

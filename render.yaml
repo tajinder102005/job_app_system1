@@ -147,22 +147,3 @@ services:
       - key: MAIL_PASSWORD
         value: ziiybjipcvbwclvn
 
-  # ── Recommendation Microservice ──────────────────────────
-  - type: web
-    name: recommendation-service
-    env: docker
-    dockerfilePath: ./backend/recommendation-service/Dockerfile
-    dockerContext: ./backend/recommendation-service
-    plan: free
-    region: oregon
-    envVars:
-      - key: PORT
-        value: 8084
-      - key: EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE
-        value: http://service-registry:8761/eureka/
-      - key: SPRING_DATASOURCE_URL
-        value: jdbc:postgresql://db.nhljemjccwxldmauivde.supabase.co:5432/postgres?sslmode=require
-      - key: SPRING_DATASOURCE_USERNAME
-        value: postgres
-      - key: SPRING_DATASOURCE_PASSWORD
-        value: Rednijat@123

@@ -87,13 +87,6 @@ public class GatewayRouteConfig {
 
 
 
-    @Bean
-    public RouterFunction<ServerResponse> recommendationRoutes() {
-        return route("recommendation_service")
-            .route(path("/recommendations/**"), http())
-            .filter(lb("recommendation-service"))
-            .build();
-    }
 
     @Bean
     public RouterFunction<ServerResponse> notificationRoutes() {
