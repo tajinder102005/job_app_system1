@@ -46,6 +46,32 @@ services:
         value: http://service-registry:8761/eureka/
       - key: JWT_SECRET
         value: jobflow-super-secret-key-2024-tajinder-singh-microservices
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:postgresql://db.nhljemjccwxldmauivde.supabase.co:5432/postgres?sslmode=require
+      - key: SPRING_DATASOURCE_USERNAME
+        value: postgres
+      - key: SPRING_DATASOURCE_PASSWORD
+        value: Rednijat@123
+
+  # ── Company Microservice ─────────────────────────────────
+  - type: web
+    name: company-service
+    env: docker
+    dockerfilePath: ./backend/company-service/Dockerfile
+    dockerContext: ./backend/company-service
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 8082
+      - key: EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE
+        value: http://service-registry:8761/eureka/
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:postgresql://db.nhljemjccwxldmauivde.supabase.co:5432/postgres?sslmode=require
+      - key: SPRING_DATASOURCE_USERNAME
+        value: postgres
+      - key: SPRING_DATASOURCE_PASSWORD
+        value: Rednijat@123
 
   # ── Job & Application Microservice ───────────────────────
   - type: web
@@ -60,6 +86,12 @@ services:
         value: 8099
       - key: EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE
         value: http://service-registry:8761/eureka/
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:postgresql://db.nhljemjccwxldmauivde.supabase.co:5432/postgres?sslmode=require
+      - key: SPRING_DATASOURCE_USERNAME
+        value: postgres
+      - key: SPRING_DATASOURCE_PASSWORD
+        value: Rednijat@123
       - key: STORAGE_TYPE
         value: supabase
       - key: SUPABASE_URL
