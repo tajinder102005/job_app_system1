@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>Job Posted</title></head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+        <h2 style="color: #2196F3;">Your Job Has Been Posted</h2>
+        <p>Hi <strong th:text="${name}"></strong>,</p>
+        <p>Your job listing <strong th:text="${jobTitle}"></strong> has been successfully posted on JobFlow.</p>
+        <p>Candidates can now find and apply to your listing.</p>
+        <p>Best regards,<br>The JobFlow Team</p>
+    </div>
+</body>
+</html>

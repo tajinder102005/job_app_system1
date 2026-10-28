@@ -1,0 +1,273 @@
+version: '3.8'
+
+services:
+
+  # ── PostgreSQL Database ────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: jobapp-postgres
+    ports:
+      - "5433:5432"
+    networks:
+      - microservices-network
+    environment:
+      - POSTGRES_DB=jobapp
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Singh@123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d jobapp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── pgAdmin ────────────────────────────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: jobapp-pgadmin
+    ports:
+      - "5050:80"
+    networks:
+      - microservices-network
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+
+  # ── RabbitMQ ───────────────────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.9-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - microservices-network
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Service Registry (Eureka) ──────────────────────────────────────────────
+  service-registry:
+    build: ./backend/service-registry
+    ports:
+      - "8761:8761"
+    networks:
+      - microservices-network
+    environment:
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+
+  # ── Config Server ──────────────────────────────────────────────────────────
+  config-server:
+    build: ./backend/config-server
+    ports:
+      - "8888:8888"
+    networks:
+      - microservices-network
+    depends_on:
+      - service-registry
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE=http://service-registry:8761/eureka
+
+  # ── Auth Service ───────────────────────────────────────────────────────────
+  auth-service:
+    build: ./backend/auth-service
+    ports:
+      - "8088:8088"
+    networks:
+      - microservices-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE=http://service-registry:8761/eureka
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/jobapp
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=Singh@123
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - JWT_SECRET=jobflow-super-secret-key-2024-tajinder-singh-microservices
+
+  # ── Company Microservice ───────────────────────────────────────────────────
+  company-service:
+    build: ./backend/company-service
+    ports:
+      - "8082:8082"
+    networks:
+      - microservices-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+      config-server:
+        condition: service_started
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE=http://service-registry:8761/eureka
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/jobapp
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=Singh@123
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_RABBITMQ_HOST=rabbitmq
+
+  # ── Job Microservice ───────────────────────────────────────────────────────
+  job-service:
+    build: ./backend/job-service
+    ports:
+      - "8099:8099"
+    networks:
+      - microservices-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+      config-server:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE=http://service-registry:8761/eureka
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/jobapp
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=Singh@123
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - COMPANY_SERVICE_BASE_URL=http://company-service:8082
+      - JAVA_TOOL_OPTIONS=-Dstorage.type=supabase
+      - STORAGE_TYPE=supabase
+      - SUPABASE_URL=https://nhljemjccwxldmauivde.supabase.co
+      - SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5obGplbWpjY3d4bGRtYXVpdmRlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4OTgyMDg3MiwiZXhwIjoyMTA1Mzk2ODcyfQ.uVN2x9aNzjrA2WxWyWDWSH_pLeK1LIkD3c3KkilR2fc
+      - SUPABASE_BUCKET=resumes
+
+  # ── Review Microservice ────────────────────────────────────────────────────
+  review-service:
+    build: ./backend/review-service
+    ports:
+      - "8086:8086"
+    networks:
+      - microservices-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+      config-server:
+        condition: service_started
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE=http://service-registry:8761/eureka
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/jobapp
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=Singh@123
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_RABBITMQ_HOST=rabbitmq
+
+  # ── API Gateway ────────────────────────────────────────────────────────────
+  api-gateway:
+    build: ./backend/api-gateway
+    ports:
+      - "8100:8100"
+    networks:
+      - microservices-network
+    depends_on:
+      - service-registry
+      - auth-service
+      - company-service
+      - job-service
+      - review-service
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE=http://service-registry:8761/eureka
+      - JWT_SECRET=jobflow-super-secret-key-2024-tajinder-singh-microservices
+
+  # ── Notification Service ───────────────────────────────────────────────────
+  notification-service:
+    build: ./backend/notification-service
+    ports:
+      - "8089:8089"
+    networks:
+      - microservices-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE=http://service-registry:8761/eureka
+      - EUREKA_CLIENT_ENABLED=true
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/notificationdb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=Singh@123
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_MAIL_HOST=smtp.gmail.com
+      - SPRING_MAIL_PORT=587
+      - MAIL_USERNAME=${MAIL_USERNAME:-tajindersingh.dev@gmail.com}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-ziiybjipcvbwclvn}
+      - SMTP_USERNAME=${MAIL_USERNAME:-tajindersingh.dev@gmail.com}
+      - SMTP_PASSWORD=${MAIL_PASSWORD:-ziiybjipcvbwclvn}
+
+  # ── Recommendation Service ─────────────────────────────────────────────────
+  recommendation-service:
+    build: ./backend/recommendation-service
+    ports:
+      - "8084:8084"
+    networks:
+      - microservices-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE=http://service-registry:8761/eureka
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/jobapp
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=Singh@123
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+
+  # ── Redis (for future caching) ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: jobapp-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - microservices-network
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Zipkin ─────────────────────────────────────────────────────────────────
+  zipkin:
+    image: openzipkin/zipkin:2.23
+    ports:
+      - "9411:9411"
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  redis_data:
