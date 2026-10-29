@@ -46,3 +46,12 @@ elasticsearch_data/
 redis_data/
 pgadmin_data/
 uploads/
+
+# Python & AI Agent
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+workflow_store.json
+backend/ai-agent-service/workflow_store.json
+
