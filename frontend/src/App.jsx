@@ -17,11 +17,11 @@ import CandidateDashboard from './pages/candidate/CandidateDashboard';
 import MyApplicationsPage from './pages/candidate/MyApplicationsPage';
 import SavedJobsPage from './pages/candidate/SavedJobsPage';
 
-// Recruiter Pages
 import RecruiterDashboard from './pages/recruiter/RecruiterDashboard';
 import MyJobsPage from './pages/recruiter/MyJobsPage';
 import ApplicationsPage from './pages/recruiter/ApplicationsPage';
 import InterviewsPage from './pages/recruiter/InterviewsPage';
+import AgenticHiringPage from './pages/recruiter/AgenticHiringPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -83,6 +83,11 @@ export default function App() {
                     <Route path="/my-jobs" element={<MyJobsPage />} />
                     <Route path="/applications" element={<ApplicationsPage />} />
                     <Route path="/interviews" element={<InterviewsPage />} />
+                  </Route>
+
+                  {/* AI Agentic Hiring Workflow (Recruiter & Admin) */}
+                  <Route element={<RoleRoute allowed={['RECRUITER', 'ADMIN']} />}>
+                    <Route path="/agentic-hiring" element={<AgenticHiringPage />} />
                   </Route>
 
                   {/* Admin Workflows */}

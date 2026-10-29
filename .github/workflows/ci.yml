@@ -1,0 +1,86 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # ── Python AI Agent Lint & Validation ──────────────────────────────────────
+  ai-agent-service-check:
+    name: Verify AI Agent Service (LangGraph / FastAPI)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        working-directory: backend/ai-agent-service
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate code syntax and imports
+        working-directory: backend/ai-agent-service
+        run: |
+          python -m py_compile main.py
+          python -c "import main; print('FastAPI & LangGraph workflow engine validated successfully!')"
+
+  # ── Frontend Build & Lint ──────────────────────────────────────────────────
+  frontend-build:
+    name: Build & Validate React Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build production bundle
+        working-directory: frontend
+        run: npm run build
+
+  # ── Java Microservices Compilation ─────────────────────────────────────────
+  backend-microservices-check:
+    name: Build Java Microservices
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - service-registry
+          - api-gateway
+          - auth-service
+          - company-service
+          - job-service
+          - review-service
+          - notification-service
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: "maven"
+
+      - name: Build ${{ matrix.service }}
+        working-directory: backend/${{ matrix.service }}
+        run: mvn clean package -DskipTests

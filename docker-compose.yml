@@ -220,6 +220,21 @@ services:
       - SMTP_USERNAME=${MAIL_USERNAME:-tajindersingh.dev@gmail.com}
       - SMTP_PASSWORD=${MAIL_PASSWORD:-ziiybjipcvbwclvn}
 
+  # ── LangGraph AI Agent Service ─────────────────────────────────────────────
+  ai-agent-service:
+    build: ./backend/ai-agent-service
+    container_name: jobapp-ai-agent
+    ports:
+      - "8000:8000"
+    networks:
+      - microservices-network
+    depends_on:
+      - service-registry
+    environment:
+      - PORT=8000
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE=http://service-registry:8761/eureka
+      - SUPABASE_URL=https://nhljemjccwxldmauivde.supabase.co
+
   # ── Redis (for future caching) ─────────────────────────────────────────────
   redis:
     image: redis:7-alpine

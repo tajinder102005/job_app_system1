@@ -45,6 +45,7 @@ import {
   CheckCircleOutline,
   VideoCall,
   Launch,
+  SmartToy,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { notificationsApi } from '../../api/services';
@@ -64,6 +65,7 @@ const NAV_CONFIG = {
   ],
   RECRUITER: [
     { path: '/dashboard', label: 'Talent Suite', icon: <Dashboard /> },
+    { path: '/agentic-hiring', label: 'AI Hiring Hub', icon: <SmartToy /> },
     { path: '/my-jobs', label: 'Job Postings', icon: <PostAdd /> },
     { path: '/applications', label: 'Candidates', icon: <Assignment /> },
     { path: '/interviews', label: 'Interviews', icon: <CalendarMonth /> },
@@ -73,6 +75,7 @@ const NAV_CONFIG = {
   ],
   ADMIN: [
     { path: '/dashboard', label: 'Control Room', icon: <Dashboard /> },
+    { path: '/agentic-hiring', label: 'AI Hiring Hub', icon: <SmartToy /> },
     { path: '/users', label: 'User Governance', icon: <Group /> },
     { path: '/company-verification', label: 'Verification', icon: <VerifiedUser /> },
     { path: '/audit-logs', label: 'Audit Logs', icon: <Security /> },

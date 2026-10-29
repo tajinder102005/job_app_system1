@@ -111,4 +111,12 @@ public class GatewayRouteConfig {
             .filter(lb("job-service"))
             .build();
     }
+
+    @Bean
+    public RouterFunction<ServerResponse> agentRoutes() {
+        return route("ai_agent_service")
+            .route(path("/agent/**"), http())
+            .filter(lb("ai-agent-service"))
+            .build();
+    }
 }

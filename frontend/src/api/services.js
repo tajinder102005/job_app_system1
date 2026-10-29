@@ -96,3 +96,16 @@ export const searchApi = {
   searchByLocation: (location) => api.get('/jobs/search', { params: { location } }),
   advancedSearch: (params) => api.get('/jobs/search', { params }),
 };
+
+export const agentApi = {
+  startWorkflow: (data) => api.post('/agent/workflows', data),
+  getAllWorkflows: () => api.get('/agent/workflows'),
+  getWorkflow: (threadId) => api.get(`/agent/workflows/${threadId}`),
+  approveJd: (threadId, data) => api.post(`/agent/workflows/${threadId}/approve-jd`, data),
+  advanceSourcing: (threadId, data) => api.post(`/agent/workflows/${threadId}/advance-sourcing`, data || {}),
+  approveShortlist: (threadId, data) => api.post(`/agent/workflows/${threadId}/approve-shortlist`, data),
+  decideHiring: (threadId, data) => api.post(`/agent/workflows/${threadId}/decide-hiring`, data),
+  approveOffer: (threadId, data) => api.post(`/agent/workflows/${threadId}/approve-offer`, data),
+  candidateResponse: (threadId, data) => api.post(`/agent/workflows/${threadId}/candidate-response`, data),
+  updateOnboardingTask: (threadId, data) => api.post(`/agent/workflows/${threadId}/onboarding-task`, data),
+};

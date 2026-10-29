@@ -147,3 +147,20 @@ services:
       - key: MAIL_PASSWORD
         value: ziiybjipcvbwclvn
 
+  # ── LangGraph AI Agent Microservice ──────────────────────
+  - type: web
+    name: ai-agent-service
+    env: docker
+    dockerfilePath: ./backend/ai-agent-service/Dockerfile
+    dockerContext: ./backend/ai-agent-service
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE
+        value: http://service-registry:8761/eureka/
+      - key: SUPABASE_URL
+        value: https://nhljemjccwxldmauivde.supabase.co
+
+
