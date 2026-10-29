@@ -23,8 +23,10 @@ import {
   VisibilityOff,
   ArrowForward,
   Business,
+  AutoAwesome,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import { setAuth } from '../../utils/auth';
 import GlassCard from '../../components/common/GlassCard';
 
 export default function AuthPage() {
@@ -197,6 +199,38 @@ export default function AuthPage() {
               </Button>
             </Grid>
           </Grid>
+
+          <Button
+            fullWidth
+            variant="contained"
+            color="success"
+            startIcon={<AutoAwesome />}
+            onClick={() => {
+              setAuth({
+                token: 'demo-jwt-recruiter-session-token',
+                userId: 101,
+                email: 'recruiter@stripe.com',
+                name: 'Tajinder Singh (Lead Recruiter)',
+                role: 'RECRUITER',
+                status: 'ACTIVE',
+                companyId: 1,
+                companyName: 'Stripe Technologies'
+              });
+              window.location.href = '/agentic-hiring';
+            }}
+            sx={{
+              mt: 1.5,
+              py: 1,
+              borderRadius: '8px',
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+              textTransform: 'none',
+              fontSize: '0.85rem',
+            }}
+          >
+            🚀 Launch AI Recruitment Demo (Instant 1-Click)
+          </Button>
         </Box>
 
         {error && (
