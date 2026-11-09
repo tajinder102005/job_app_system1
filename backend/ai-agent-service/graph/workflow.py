@@ -12,6 +12,12 @@ from models.state import (
     OnboardingTask,
     AuditLogEntry
 )
+from graph.llm import (
+    generate_jd_with_groq,
+    screen_candidate_with_groq,
+    synthesize_interview_feedback_with_groq,
+    generate_sourcing_recommendations_with_groq
+)
 
 def log_action(state: HiringWorkflowState, actor: str, action: str, details: str, gate_approved: bool = True):
     entry = AuditLogEntry(
@@ -37,40 +43,39 @@ def node_create_hiring_request(state: HiringWorkflowState) -> HiringWorkflowStat
     )
     return state
 
-# ── Node 2: Generate Job Description (JD) ───────────────────────────────────────
+# ── Node 2: Generate Job Description (JD) via Groq LLM ─────────────────────────
 def node_generate_jd(state: HiringWorkflowState) -> HiringWorkflowState:
     state.current_node = "generate_jd"
     req = state.request
     current_version = (state.jd_draft.version + 1) if state.jd_draft else 1
     
-    # If feedback was provided, incorporate it into complete replacement draft
-    feedback_notes = ""
-    if state.jd_feedback_history:
-        feedback_notes = f"\n- Revisions Applied: {state.jd_feedback_history[-1]}"
-    
-    title = f"{req.role} ({req.department})"
-    summary = (
-        f"We are seeking an exceptional {req.role} to join our high-impact {req.department} team. "
-        f"In this role, you will design, scale, and optimize core platforms in a fast-paced environment."
+    # Invoke Groq LLaMA/GPT-OSS model to generate tailored JD
+    llm_res = generate_jd_with_groq(
+        role=req.role,
+        department=req.department,
+        openings=req.openings,
+        experience_range=req.experience_range,
+        required_skills=req.required_skills,
+        preferred_skills=req.preferred_skills,
+        location=req.location,
+        salary_range=req.salary_range,
+        feedback_history=state.jd_feedback_history
     )
-    responsibilities = [
-        f"Architect and deliver resilient, high-throughput microservices using {', '.join(req.required_skills[:3])}.",
-        "Collaborate closely with product management and platform architects to refine technical roadmaps.",
-        "Mentor engineering peers, perform thorough code reviews, and champion clean architecture practices.",
-        "Implement end-to-end observability, distributed tracing, and automated test coverage across services."
-    ]
-    qualifications = [
-        f"Demonstrated experience in {req.experience_range} of production software engineering.",
-        f"Strong core proficiency in {', '.join(req.required_skills)}.",
-        "Deep familiarity with cloud-native architectures, containerization, and SQL/NoSQL databases.",
-        "Bachelor's or Master's degree in Computer Science, Software Engineering, or equivalent practical experience."
-    ]
-    interview_stages = [
-        "1. Technical Recruiter Screen (30 mins)",
+    
+    title = llm_res.get("title", f"{req.role} ({req.department})")
+    summary = llm_res.get("summary", "")
+    responsibilities = llm_res.get("responsibilities", [])
+    qualifications = llm_res.get("qualifications", [])
+    interview_stages = llm_res.get("interview_stages", [
+        "1. Technical Screen (30 mins)",
         "2. Core Technical & Problem Solving (60 mins)",
         "3. System Architecture & Distributed Systems (60 mins)",
         "4. Culture Alignment & Engineering Leadership (45 mins)"
-    ]
+    ])
+    
+    feedback_notes = ""
+    if state.jd_feedback_history:
+        feedback_notes = f"\n- Revisions Applied from Feedback: {state.jd_feedback_history[-1]}"
     
     full_markdown = f"""# {title}
 **Location:** {req.location} | **Compensation:** {req.salary_range} | **Target Deadline:** {req.hiring_deadline}
@@ -85,7 +90,7 @@ def node_generate_jd(state: HiringWorkflowState) -> HiringWorkflowState:
 {chr(10).join(['- ' + q for q in qualifications])}
 
 ## Preferred Skills
-{chr(10).join(['- ' + p for p in (req.preferred_skills or ['Experience with Kubernetes & Distributed Event Streaming', 'Modern React/TypeScript frontends'])])}
+{chr(10).join(['- ' + p for p in (req.preferred_skills or ['Distributed systems', 'Container orchestration'])])}
 
 ## Interview Process
 {chr(10).join(['- ' + s for s in interview_stages])}
@@ -112,8 +117,8 @@ def node_generate_jd(state: HiringWorkflowState) -> HiringWorkflowState:
     log_action(
         state,
         actor="AI_AGENT",
-        action="JD_GENERATED",
-        details=f"Generated Job Description Version {current_version} with full criteria and interview stages.{feedback_notes}"
+        action="JD_GENERATED_BY_GROQ_LLM",
+        details=f"Generated Job Description Version {current_version} with Groq LLM inference.{feedback_notes}"
     )
     return state
 
@@ -207,24 +212,24 @@ def node_evaluate_pipeline(state: HiringWorkflowState) -> str:
     else:
         return "improve_sourcing"
 
-# ── Node 7: Improve Sourcing Strategy ───────────────────────────────────────────
+# ── Node 7: Improve Sourcing Strategy via Groq LLM ──────────────────────────────
 def node_improve_sourcing(state: HiringWorkflowState) -> HiringWorkflowState:
     state.current_node = "improve_sourcing"
     state.sourcing_cycle += 1
-    
     req = state.request
-    suggestions = [
-        f"Relax optional requirements while keeping mandatory core ({', '.join(req.required_skills[:2])}).",
-        f"Broaden geographic filter to 'Hybrid / Remote-friendly' for {req.location}.",
-        "Distribute job link to Wellfound (AngelList), GitHub Talent, and alumni networks.",
-        "Trigger targeted Employee Referral Campaign offering bonus for fast candidate referral."
-    ]
+    
+    # Generate live sourcing recommendations using Groq
+    suggestions = generate_sourcing_recommendations_with_groq(
+        role=req.role,
+        required_skills=req.required_skills,
+        location=req.location
+    )
     state.sourcing_recommendations = suggestions
     log_action(
         state,
         actor="AI_AGENT",
-        action="SOURCING_ADJUSTED",
-        details=f"Identified applicant volume gap. Generated {len(suggestions)} strategic sourcing optimizations for Cycle {state.sourcing_cycle}."
+        action="SOURCING_ADJUSTED_BY_GROQ_LLM",
+        details=f"Identified applicant volume gap. Groq LLM synthesized {len(suggestions)} strategic sourcing channels for Cycle {state.sourcing_cycle}."
     )
     return state
 
@@ -243,50 +248,61 @@ def node_wait_48_hours(state: HiringWorkflowState) -> HiringWorkflowState:
     )
     return state
 
-# ── Node 9: Screen & Shortlist Candidates ───────────────────────────────────────
+# ── Node 9: Screen & Shortlist Candidates via Groq LLM ─────────────────────────
 def node_screen_candidates(state: HiringWorkflowState) -> HiringWorkflowState:
     state.current_node = "screen_candidates"
     req = state.request
     
-    # Generate structured evidence for top candidates
-    candidates = [
-        CandidateEvidence(
-            id="cand-001",
-            name="Aarav Sharma",
-            email="aarav.sharma@example.com",
-            resume_summary="Senior Engineer with 5+ years building scalable Java/Spring Boot microservices, Kafka event-driven architectures, and PostgreSQL schemas.",
-            extracted_skills=["Java", "Spring Boot", "Microservices", "PostgreSQL", "Docker", "RabbitMQ", "Kafka"],
-            years_experience=5.5,
-            match_score=94,
-            match_explanation="Exceeds experience requirement, full tech-stack match, demonstrated microservices design patterns in high-traffic enterprise apps.",
-            missing_qualifications=[],
-            status="SHORTLISTED"
-        ),
-        CandidateEvidence(
-            id="cand-002",
-            name="Priya Patel",
-            email="priya.patel@example.com",
-            resume_summary="Backend Developer with 4 years experience in Java Spring Cloud, REST APIs, Redis caching, and CI/CD pipelines.",
-            extracted_skills=["Java", "Spring Boot", "Spring Cloud", "PostgreSQL", "Redis", "Git"],
-            years_experience=4.0,
-            match_score=88,
-            match_explanation="Solid hands-on Spring Cloud & API Gateway expertise; meets all mandatory criteria with high academic record.",
-            missing_qualifications=["Limited production Kubernetes experience"],
-            status="SHORTLISTED"
-        ),
-        CandidateEvidence(
-            id="cand-003",
-            name="Rohan Verma",
-            email="rohan.verma@example.com",
-            resume_summary="Full Stack Developer focused on Node.js and React with 2 years of Java backend experience.",
-            extracted_skills=["React", "JavaScript", "Java", "MySQL", "AWS"],
-            years_experience=3.0,
-            match_score=62,
-            match_explanation="Strong frontend skills, but below required depth in enterprise Spring Boot and multi-threading requirements.",
-            missing_qualifications=["Insufficient Spring Boot depth", "No message broker experience"],
-            status="PENDING_REVIEW"
-        )
+    profiles = [
+        {
+            "id": "cand-001",
+            "name": "Aarav Sharma",
+            "email": "aarav.sharma@example.com",
+            "exp": 5.5,
+            "resume": f"Senior Software Engineer with 5.5 years designing distributed architectures. Expert in {', '.join(req.required_skills[:3])}, asynchronous queues, PostgreSQL query optimization, and high-concurrency cloud systems."
+        },
+        {
+            "id": "cand-002",
+            "name": "Priya Patel",
+            "email": "priya.patel@example.com",
+            "exp": 4.0,
+            "resume": f"Backend Engineer with 4 years experience in microservices development, RESTful APIs, caching strategies, and CI/CD automation. Skilled in {req.required_skills[0] if req.required_skills else 'Java'} and cloud infrastructure."
+        },
+        {
+            "id": "cand-003",
+            "name": "Rohan Verma",
+            "email": "rohan.verma@example.com",
+            "exp": 2.5,
+            "resume": f"Junior Developer with 2.5 years experience focusing on web frontend development and introductory API integration. Seeking to transition into core backend engineering."
+        }
     ]
+    
+    candidates = []
+    for p in profiles:
+        eval_result = screen_candidate_with_groq(
+            candidate_name=p["name"],
+            experience_years=p["exp"],
+            resume_text=p["resume"],
+            job_role=req.role,
+            required_skills=req.required_skills
+        )
+        score = int(eval_result.get("match_score", 70))
+        is_shortlist = score >= 75
+        candidates.append(
+            CandidateEvidence(
+                id=p["id"],
+                name=p["name"],
+                email=p["email"],
+                resume_summary=p["resume"],
+                extracted_skills=eval_result.get("extracted_skills", req.required_skills[:3]),
+                years_experience=p["exp"],
+                match_score=score,
+                match_explanation=eval_result.get("match_explanation", "Evaluated by AI Recruiter."),
+                missing_qualifications=eval_result.get("missing_qualifications", []),
+                status="SHORTLISTED" if is_shortlist else "PENDING_REVIEW"
+            )
+        )
+        
     state.candidates = candidates
     state.is_paused_for_approval = True
     state.pending_gate = "APPROVE_SHORTLIST"
@@ -294,8 +310,8 @@ def node_screen_candidates(state: HiringWorkflowState) -> HiringWorkflowState:
     log_action(
         state,
         actor="AI_AGENT",
-        action="CANDIDATES_SCREENED",
-        details=f"Extracted structured resume evidence for {len(candidates)} candidates. Shortlisted {len([c for c in candidates if c.status == 'SHORTLISTED'])} for recruiter human-in-the-loop review."
+        action="CANDIDATES_SCREENED_BY_GROQ_LLM",
+        details=f"Extracted structured resume evidence and match scores for {len(candidates)} candidates using Groq LLM. Shortlisted {len([c for c in candidates if c.status == 'SHORTLISTED'])} for recruiter authorization."
     )
     return state
 
@@ -331,16 +347,16 @@ def node_schedule_interviews(state: HiringWorkflowState) -> HiringWorkflowState:
     )
     return state
 
-# ── Node 11: Collect Feedback & Synthesize ──────────────────────────────────────
+# ── Node 11: Collect Feedback & Synthesize via Groq LLM ─────────────────────────
 def node_collect_feedback(state: HiringWorkflowState) -> HiringWorkflowState:
     state.current_node = "collect_feedback"
+    req = state.request
     
-    # Record verified feedback assessments
     if state.interviews:
         state.interviews[0].status = "COMPLETED"
         state.interviews[0].feedback = (
-            "Candidate demonstrated exceptional grasp of distributed systems, Eureka load balancing, "
-            "and outbox patterns for transactional consistency. Solved coding challenge cleanly."
+            "Demonstrated deep architectural mastery, scalable system design principles, "
+            "and solved distributed consistency problem with high elegance."
         )
         state.interviews[0].rating = 5
         state.interviews[0].recommendation = "STRONG_HIRE"
@@ -348,10 +364,17 @@ def node_collect_feedback(state: HiringWorkflowState) -> HiringWorkflowState:
         if len(state.interviews) > 1:
             state.interviews[1].status = "COMPLETED"
             state.interviews[1].feedback = (
-                "Excellent communication, strong ownership mindset, articulated past architectural tradeoffs with clarity."
+                "Superb communication skills, proactive leadership approach, aligned with engineering standards."
             )
             state.interviews[1].rating = 5
             state.interviews[1].recommendation = "HIRE"
+            
+    # Groq synthesis
+    synth = synthesize_interview_feedback_with_groq(
+        candidate_name="Aarav Sharma",
+        role=req.role if req else "Candidate",
+        rounds=[i.model_dump() for i in state.interviews]
+    )
             
     state.is_paused_for_approval = True
     state.pending_gate = "DECIDE_HIRING"
@@ -359,8 +382,8 @@ def node_collect_feedback(state: HiringWorkflowState) -> HiringWorkflowState:
     log_action(
         state,
         actor="AI_AGENT",
-        action="FEEDBACK_COLLECTED",
-        details="Interview feedback recorded from all interviewers. Synthesis prepared for human hiring manager decision gate."
+        action="FEEDBACK_SYNTHESIZED_BY_GROQ_LLM",
+        details=f"Groq LLM synthesized panel interviews: Overall recommendation {synth.get('recommendation', 'STRONG_HIRE')} with rating {synth.get('overall_rating', 5)}/5."
     )
     return state
 
